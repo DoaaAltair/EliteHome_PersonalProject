@@ -63,8 +63,12 @@ app.use(async (req, res, next) => {
             app.locals.dbTested = true;
             console.log("✅ Database connection verified");
         } catch (dbError) {
-            console.error("❌ Database connection failed:", dbError);
-            // Don't block requests, but log the error
+            console.error("❌ Database connection failed:");
+            console.error("   Error:", dbError.message);
+            console.error("   Code:", dbError.code);
+            console.error("   Stack:", dbError.stack);
+            console.error("   DATABASE_URL exists:", !!process.env.DATABASE_URL);
+            console.error("   DATABASE_URL length:", process.env.DATABASE_URL?.length || 0);
         }
     }
     next();
