@@ -1,0 +1,41 @@
+# Development files
+backend/node_modules/
+frontend/node_modules/
+node_modules/
+
+# Database backups
+backend/backups/
+*.sql
+*.bat
+*.ps1
+
+# Uploads (use cloud storage in production)
+backend/uploads/
+
+# Test files
+backend/test_*.js
+backend/diagnose_*.js
+backend/create_*.js
+backend/update_*.js
+backend/fix_*.js
+backend/debug_*.js
+backend/check_*.js
+backend/seed_*.js
+backend/hash.js
+
+# Documentation
+*.md
+!README.md
+
+# Environment files (use Vercel environment variables)
+backend/.env
+.env
+.env.local
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+

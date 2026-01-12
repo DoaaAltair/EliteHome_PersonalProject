@@ -1,0 +1,14 @@
+{
+    "name": "elite-home",
+    "version": "1.0.0",
+    "description": "Elite Home - Full-stack property management system",
+    "scripts": {
+        "install:frontend": "cd frontend && npm install",
+        "install:backend": "cd backend && npm install",
+        "install:all": "npm run install:frontend && npm run install:backend",
+        "build": "cd frontend && npm run build"
+    },
+    "engines": {
+        "node": ">=18.x"
+    }
+}
