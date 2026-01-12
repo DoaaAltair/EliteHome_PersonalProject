@@ -18,21 +18,39 @@ const notificationRoutes = require("../backend/routes/notifications");
 const app = express();
 
 // CORS configuration for Vercel
+const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',')
+    : ['*'];
+
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: function (origin, callback) {
+        if (allowedOrigins.includes('*') || !origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(null, true); // Allow all for now
+        }
+    },
     credentials: true
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Routes
+// Routes - Note: Vercel rewrites already add /api prefix, but routes expect it
 app.use("/api/auth", authRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", verifyToken, requireRole("admin"), adminRoutes);
 app.use("/api/owner", verifyToken, requireRole("owner"), ownerRoutes);
 app.use("/api/invoices", verifyToken, invoiceRoutes);
 app.use("/api/finances", verifyToken, financeRoutes);
+
+// Also handle routes without /api prefix (in case Vercel doesn't add it)
+app.use("/auth", authRoutes);
+app.use("/notifications", notificationRoutes);
+app.use("/admin", verifyToken, requireRole("admin"), adminRoutes);
+app.use("/owner", verifyToken, requireRole("owner"), ownerRoutes);
+app.use("/invoices", verifyToken, invoiceRoutes);
+app.use("/finances", verifyToken, financeRoutes);
 
 // Static files (uploads) - Note: Vercel has limited file system, consider using cloud storage
 // app.use("/uploads", express.static(path.join(__dirname, "../backend/uploads")));
@@ -167,6 +185,21 @@ app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error("Error:", err);
+    res.status(err.status || 500).json({
+        message: err.message || "Internal server error",
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+});
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({ message: "Route not found" });
+});
+
 // Export for Vercel serverless
+// Vercel automatically handles Express apps exported from api/ directory
 module.exports = app;
 

@@ -28,11 +28,24 @@ export const apiRequest = async (endpoint, options = {}) => {
 
         const response = await fetch(url, config);
 
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('text/html')) {
-            const htmlText = await response.text();
-            console.error(`Server returned HTML instead of JSON for ${endpoint}:`, htmlText.substring(0, 200));
-            throw new Error(`Server error: Received HTML response instead of JSON`);
+        // Check content type before parsing
+        const contentType = response.headers.get('content-type') || '';
+
+        if (!contentType.includes('application/json')) {
+            // Try to get text first to see what we received
+            const text = await response.text();
+            console.error(`Server returned non-JSON response for ${endpoint}:`, text.substring(0, 500));
+
+            // Try to parse as JSON anyway (in case content-type header is wrong)
+            try {
+                const data = JSON.parse(text);
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                }
+                return data;
+            } catch (parseError) {
+                throw new Error(`Server returned invalid response. Status: ${response.status}. Response: ${text.substring(0, 100)}`);
+            }
         }
 
         const data = await response.json();
@@ -44,7 +57,12 @@ export const apiRequest = async (endpoint, options = {}) => {
         return data;
     } catch (error) {
         console.error(`API request failed for ${endpoint}:`, error);
-        throw error;
+        // Make sure we always throw an Error object with a message
+        if (error instanceof Error) {
+            throw error;
+        } else {
+            throw new Error(error.message || `Request failed: ${error}`);
+        }
     }
 };
 
