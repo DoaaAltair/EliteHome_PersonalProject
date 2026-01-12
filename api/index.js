@@ -6,10 +6,17 @@ const path = require("path");
 // Global error handler for uncaught errors
 process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
+    console.error('Stack:', error.stack);
+    // Don't exit in serverless - let Vercel handle it
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    console.error('Unhandled Rejection at:', promise);
+    console.error('Reason:', reason);
+    if (reason instanceof Error) {
+        console.error('Stack:', reason.stack);
+    }
+    // Don't exit in serverless - let Vercel handle it
 });
 
 let db, verifyToken, requireRole, authRoutes, invoiceRoutes, financeRoutes, adminRoutes, ownerRoutes, notificationRoutes;
@@ -69,10 +76,26 @@ app.use(async (req, res, next) => {
             console.error("   Stack:", dbError.stack);
             console.error("   DATABASE_URL exists:", !!process.env.DATABASE_URL);
             console.error("   DATABASE_URL length:", process.env.DATABASE_URL?.length || 0);
+            // Don't block requests, but log the error
         }
     }
     next();
 });
+
+// Wrap all routes in error handler to prevent crashes
+const wrapAsync = (fn) => {
+    return (req, res, next) => {
+        Promise.resolve(fn(req, res, next)).catch((err) => {
+            console.error("Unhandled route error:", err);
+            if (!res.headersSent) {
+                res.status(500).json({
+                    message: "Internal server error",
+                    error: process.env.NODE_ENV !== 'production' ? err.message : undefined
+                });
+            }
+        });
+    };
+};
 
 // Routes - Note: Vercel rewrites already add /api prefix, but routes expect it
 app.use("/api/auth", authRoutes);
@@ -219,8 +242,64 @@ app.patch("/api/apartments/:id/household-done", verifyToken, async (req, res) =>
 });
 
 // Health check
-app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+app.get("/api/health", async (req, res) => {
+    try {
+        // Test database connection
+        await db.query("SELECT 1");
+        res.json({
+            status: "ok",
+            timestamp: new Date().toISOString(),
+            database: "connected"
+        });
+    } catch (dbError) {
+        console.error("Health check - Database error:", dbError);
+        res.status(500).json({
+            status: "error",
+            timestamp: new Date().toISOString(),
+            database: "disconnected",
+            error: process.env.NODE_ENV !== 'production' ? dbError.message : undefined,
+            code: dbError.code
+        });
+    }
+});
+
+// Database test endpoint
+app.get("/api/test-db", async (req, res) => {
+    try {
+        const hasDbUrl = !!process.env.DATABASE_URL;
+        const dbUrlLength = process.env.DATABASE_URL?.length || 0;
+        const hasJwtSecret = !!process.env.JWT_SECRET;
+
+        // Try to connect
+        const result = await db.query("SELECT 1 as test, NOW() as time");
+
+        res.json({
+            success: true,
+            database: "connected",
+            env: {
+                hasDatabaseUrl: hasDbUrl,
+                databaseUrlLength: dbUrlLength,
+                hasJwtSecret: hasJwtSecret
+            },
+            queryResult: result.rows[0]
+        });
+    } catch (error) {
+        console.error("Database test error:", error);
+        res.status(500).json({
+            success: false,
+            database: "error",
+            error: {
+                message: error.message,
+                code: error.code,
+                name: error.name
+            },
+            env: {
+                hasDatabaseUrl: !!process.env.DATABASE_URL,
+                databaseUrlLength: process.env.DATABASE_URL?.length || 0,
+                hasJwtSecret: !!process.env.JWT_SECRET
+            }
+        });
+    }
 });
 
 // Error handling middleware (must be before 404 handler)
@@ -237,6 +316,18 @@ app.use((err, req, res, next) => {
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({ message: "Route not found" });
+});
+
+// Global error handler - catch all unhandled errors
+app.use((err, req, res, next) => {
+    // This should never be reached if error handling is correct, but just in case
+    console.error("Global error handler caught:", err);
+    if (!res.headersSent) {
+        res.status(500).json({
+            message: "Internal server error",
+            error: process.env.NODE_ENV !== 'production' ? err.message : undefined
+        });
+    }
 });
 
 // Export for Vercel serverless

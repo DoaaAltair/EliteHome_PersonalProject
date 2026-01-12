@@ -39,12 +39,25 @@ router.post("/register", async (req, res) => {
 
 router.post("/login", async (req, res) => {
     try {
-        const { username, password } = req.body;
+        // Ensure we always return JSON, even on errors
+        const { username, password } = req.body || {};
 
-        if (!username || !password)
+        if (!username || !password) {
             return res.status(400).json({ message: "Missing fields" });
+        }
 
         console.log(`🔍 Login attempt for user: ${username}`);
+
+        // Test database connection first
+        try {
+            await db.query("SELECT 1");
+        } catch (dbTestError) {
+            console.error("❌ Database connection test failed:", dbTestError);
+            return res.status(500).json({
+                message: "Database connection failed",
+                error: process.env.NODE_ENV !== 'production' ? dbTestError.message : undefined
+            });
+        }
 
         const [rows] = await db.execute(
             "SELECT id, username, password, role, is_blocked FROM users WHERE username = ?",
