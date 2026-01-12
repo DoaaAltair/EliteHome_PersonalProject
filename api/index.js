@@ -3,17 +3,35 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 
-// Import backend modules
-const db = require("../backend/db");
-const { verifyToken } = require("../backend/middleware/verifyToken");
-const { requireRole } = require("../backend/middleware/authMiddleware");
+// Global error handler for uncaught errors
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+});
 
-const authRoutes = require("../backend/routes/auth");
-const invoiceRoutes = require("../backend/routes/invoices");
-const financeRoutes = require("../backend/routes/finances");
-const adminRoutes = require("../backend/routes/adminRoutes");
-const ownerRoutes = require("../backend/routes/ownerRoutes");
-const notificationRoutes = require("../backend/routes/notifications");
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+let db, verifyToken, requireRole, authRoutes, invoiceRoutes, financeRoutes, adminRoutes, ownerRoutes, notificationRoutes;
+
+try {
+    // Import backend modules with error handling
+    db = require("../backend/db");
+    verifyToken = require("../backend/middleware/verifyToken").verifyToken;
+    requireRole = require("../backend/middleware/authMiddleware").requireRole;
+
+    authRoutes = require("../backend/routes/auth");
+    invoiceRoutes = require("../backend/routes/invoices");
+    financeRoutes = require("../backend/routes/finances");
+    adminRoutes = require("../backend/routes/adminRoutes");
+    ownerRoutes = require("../backend/routes/ownerRoutes");
+    notificationRoutes = require("../backend/routes/notifications");
+
+    console.log("✅ All modules loaded successfully");
+} catch (error) {
+    console.error("❌ Error loading modules:", error);
+    throw error;
+}
 
 const app = express();
 
@@ -35,6 +53,22 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Test database connection on startup
+app.use(async (req, res, next) => {
+    // Only test on first request to avoid overhead
+    if (!app.locals.dbTested) {
+        try {
+            await db.query("SELECT 1");
+            app.locals.dbTested = true;
+            console.log("✅ Database connection verified");
+        } catch (dbError) {
+            console.error("❌ Database connection failed:", dbError);
+            // Don't block requests, but log the error
+        }
+    }
+    next();
+});
 
 // Routes - Note: Vercel rewrites already add /api prefix, but routes expect it
 app.use("/api/auth", authRoutes);
@@ -185,12 +219,14 @@ app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Error handling middleware
+// Error handling middleware (must be before 404 handler)
 app.use((err, req, res, next) => {
-    console.error("Error:", err);
+    console.error("Express Error:", err);
+    console.error("Error stack:", err.stack);
     res.status(err.status || 500).json({
         message: err.message || "Internal server error",
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+        error: err.name || "Error",
+        ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
     });
 });
 

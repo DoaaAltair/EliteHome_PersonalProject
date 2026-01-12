@@ -112,7 +112,16 @@ router.post("/login", async (req, res) => {
         });
     } catch (err) {
         console.error("❌ Login error:", err);
-        res.status(500).json({ message: "Server error" });
+        console.error("Error stack:", err.stack);
+        console.error("Error details:", {
+            message: err.message,
+            code: err.code,
+            name: err.name
+        });
+        res.status(500).json({
+            message: "Server error",
+            error: process.env.NODE_ENV !== 'production' ? err.message : undefined
+        });
     }
 });
 
