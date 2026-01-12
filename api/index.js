@@ -61,23 +61,21 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Test database connection on startup
+// Test database connection on first request (non-blocking)
 app.use(async (req, res, next) => {
     // Only test on first request to avoid overhead
     if (!app.locals.dbTested) {
-        try {
-            await db.query("SELECT 1");
-            app.locals.dbTested = true;
+        app.locals.dbTested = true; // Mark as tested to avoid multiple tests
+        // Test in background, don't block request
+        db.query("SELECT 1").then(() => {
             console.log("✅ Database connection verified");
-        } catch (dbError) {
+        }).catch((dbError) => {
             console.error("❌ Database connection failed:");
             console.error("   Error:", dbError.message);
             console.error("   Code:", dbError.code);
-            console.error("   Stack:", dbError.stack);
             console.error("   DATABASE_URL exists:", !!process.env.DATABASE_URL);
             console.error("   DATABASE_URL length:", process.env.DATABASE_URL?.length || 0);
-            // Don't block requests, but log the error
-        }
+        });
     }
     next();
 });
@@ -331,6 +329,7 @@ app.use((err, req, res, next) => {
 });
 
 // Export for Vercel serverless
-// Vercel automatically handles Express apps exported from api/ directory
+// Vercel expects Express app to be exported directly
+// The app will handle all routes and errors internally
 module.exports = app;
 
