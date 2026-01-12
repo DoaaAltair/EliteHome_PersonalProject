@@ -2,13 +2,10 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const multer = require("multer");
-const path = require("path");
+const { uploadToSupabase, deleteFromSupabase } = require("../utils/supabaseStorage");
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, "uploads/"),
-    filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname)),
-});
-
+// Use memory storage for Vercel (serverless) - files will be uploaded to Supabase
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 router.post("/", upload.single("proof"), async (req, res) => {
@@ -16,7 +13,26 @@ router.post("/", upload.single("proof"), async (req, res) => {
         console.log("Incoming invoice data:", req.body);
 
         const { apartment_id, employee_name, item, total, description, currency } = req.body;
-        const proof = req.file ? req.file.filename : null;
+        let proofUrl = null;
+
+        // Upload file to Supabase Storage if provided
+        if (req.file) {
+            try {
+                const uploadResult = await uploadToSupabase(
+                    req.file.buffer,
+                    req.file.originalname,
+                    "invoices"
+                );
+                proofUrl = uploadResult.url;
+                console.log("✅ File uploaded to Supabase Storage:", proofUrl);
+            } catch (uploadError) {
+                console.error("❌ Error uploading file to Supabase:", uploadError);
+                return res.status(500).json({
+                    message: "Failed to upload proof file",
+                    error: uploadError.message
+                });
+            }
+        }
 
         if (!apartment_id || !employee_name || !item || !total) {
             return res.status(400).json({ message: "Please fill in all required fields." });
@@ -24,7 +40,7 @@ router.post("/", upload.single("proof"), async (req, res) => {
 
         const [result] = await db.execute(
             "INSERT INTO invoices (apartment_id, employee_name, item, total, description, proof, currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
-            [apartment_id, employee_name, item, total, description, proof, currency || "₺"]
+            [apartment_id, employee_name, item, total, description, proofUrl, currency || "₺"]
         );
 
         res.status(201).json({
@@ -34,7 +50,7 @@ router.post("/", upload.single("proof"), async (req, res) => {
             item,
             total,
             description,
-            proof,
+            proof: proofUrl,
             currency: currency || "₺",
             created_at: new Date(),
         });
@@ -75,6 +91,23 @@ router.delete("/:id", async (req, res) => {
     try {
         const { id } = req.params;
         if (!id) return res.status(400).json({ message: "Missing id" });
+
+        // Get invoice to delete proof file from Supabase Storage
+        const [invoiceRows] = await db.execute("SELECT proof FROM invoices WHERE id = ?", [id]);
+        if (invoiceRows.length === 0) {
+            return res.status(404).json({ message: "Invoice not found" });
+        }
+
+        // Delete proof file from Supabase Storage if it exists
+        const proofUrl = invoiceRows[0].proof;
+        if (proofUrl) {
+            try {
+                await deleteFromSupabase(proofUrl, "invoices");
+            } catch (deleteError) {
+                console.warn("⚠️ Could not delete file from Supabase Storage:", deleteError);
+                // Continue with invoice deletion even if file deletion fails
+            }
+        }
 
         const [result] = await db.execute("DELETE FROM invoices WHERE id = ?", [id]);
         if (result.affectedRows === 0) {
