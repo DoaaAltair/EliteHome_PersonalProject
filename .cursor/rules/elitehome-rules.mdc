@@ -1,0 +1,26 @@
+---
+alwaysApply: true
+---
+# 🏠 Elite Home — Full-Stack Project Guidelines
+
+## 🎯 Projectdoel
+Elite Home is een modern, veilig en gebruiksvriendelijk vastgoedbeheersysteem waarmee beheerders, eigenaren en medewerkers appartementen, financiën, facturen en meldingen kunnen beheren via een overzichtelijk dashboard.  
+De nadruk ligt op **professionaliteit, snelheid, veiligheid en een strakke gebruikerservaring**.
+
+## 🎨 Frontend & UX/UI
+- Ontwerp **responsieve** layout die werkt op mobiel, tablet en desktop.
+- Gebruik **modern, minimalistisch design** (lichte schaduwen, ronde hoeken, pastelkleuren).
+- Gebruik **glassmorphism**-stijl (transparante panelen met blur).
+- Formulieren moeten duidelijke validaties hebben en directe feedback geven (✅/❌).
+- Gebruik `alert()`, modals of toasts (bij voorkeur met React Toastify) voor gebruikersfeedback.
+- Navigatiebalk moet automatisch de juiste items tonen op basis van de gebruiker (`role`).
+- Buttons en inputs moeten consistent zijn qua stijl (zelfde kleurenpalet).
+- Tabellen moeten sorteerbaar en goed leesbaar zijn, met responsive scrolling.
+
+## 📱 Responsiveness & Accessibility
+- Mobile-first approach.
+- Gebruik flexbox & grid voor lay-out.
+- Zorg dat tekst leesbaar is op elk schermformaat (min. 14px body font).
+- Alle knoppen zijn groot genoeg om aan te raken (48x48px minimum).
+- Beschrijf knoppen en links met aria-labels voor screen readers.
+
