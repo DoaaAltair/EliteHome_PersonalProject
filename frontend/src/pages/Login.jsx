@@ -48,7 +48,14 @@ export default function Login() {
 
         } catch (err) {
             console.error("Login error:", err);
-            setError(err.message || "Login failed. Please check your credentials.");
+            console.error("Error details:", {
+                message: err.message,
+                code: err.code,
+                details: err.details
+            });
+            // Show the actual error message from the server
+            const errorMessage = err.message || "Login failed. Please check your credentials.";
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

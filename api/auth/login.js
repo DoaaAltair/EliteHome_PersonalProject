@@ -30,11 +30,16 @@ module.exports = async function handler(req, res) {
         // Test database connection first
         if (!db || typeof db.execute !== 'function') {
             console.error("❌ Database connection not available");
+            console.error("   db type:", typeof db);
+            console.error("   db.execute type:", typeof db?.execute);
             return res.status(500).json({
                 message: "Database connection error",
                 error: "Database pool is not properly initialized"
             });
         }
+
+        console.log("✅ Database connection available, executing query...");
+        console.log("   DATABASE_URL exists:", !!process.env.DATABASE_URL);
 
         const [rows] = await db.execute(
             "SELECT id, username, password, role, is_blocked FROM users WHERE username = ? LIMIT 1",
@@ -82,11 +87,12 @@ module.exports = async function handler(req, res) {
         console.error("DATABASE_URL exists:", !!process.env.DATABASE_URL);
 
         // Return more detailed error for debugging
+        // Always include error message in production for better debugging
         res.status(500).json({
             message: "Server error",
             error: err.message || "Unknown error",
             code: err.code,
-            // Only show details in development or if explicitly enabled
+            // Show stack trace in development or if DEBUG is enabled
             details: (process.env.NODE_ENV !== "production" || process.env.DEBUG === "true")
                 ? err.stack
                 : undefined
