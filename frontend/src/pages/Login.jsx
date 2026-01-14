@@ -44,6 +44,8 @@ export default function Login() {
             } else {
                 navigate("/home");
             }
+            console.log(import.meta.env.VITE_API_URL);
+
         } catch (err) {
             console.error("Login error:", err);
             setError(err.message || "Login failed. Please check your credentials.");
