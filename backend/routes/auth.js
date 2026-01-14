@@ -1,5 +1,5 @@
 const express = require("express");
-const bcrypt = require("bcryptjs"); // ✅ serverless-safe
+const bcrypt = require("bcryptjs"); 
 const jwt = require("jsonwebtoken");
 const db = require("../db");
 
