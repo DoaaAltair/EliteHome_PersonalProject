@@ -160,3 +160,11 @@ db.query("SELECT 1")
     .catch(err => console.error("❌ Database connection error:", err));
 
 module.exports = app;
+
+app.get("/health", (req, res) => {
+    res.json({ status: "ok" });
+});
+
+app.get("/api/health", (req, res) => {
+    res.json({ status: "ok" });
+});
