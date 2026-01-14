@@ -1,5 +1,12 @@
-// Automatically use Vercel API URL in production, localhost in development
-const API_BASE_URL = process.env.REACT_APP_API_URL ||
+// Automatically use Vite/Vercel/Railway API URL if available, otherwise fall back
+const VITE_API_BASE_URL = (typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    import.meta.env.VITE_API_URL)
+    ? import.meta.env.VITE_API_URL
+    : null;
+
+const API_BASE_URL = VITE_API_BASE_URL ||
+    process.env.REACT_APP_API_URL ||
     (process.env.NODE_ENV === 'production'
         ? window.location.origin
         : "http://localhost:5000");
