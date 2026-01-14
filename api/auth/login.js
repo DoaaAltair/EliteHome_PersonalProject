@@ -11,11 +11,29 @@ module.exports = async function handler(req, res) {
         return res.status(405).json({ message: "Method not allowed" });
     }
 
+    // Check for required environment variables
+    if (!SECRET) {
+        console.error("❌ JWT_SECRET is not set");
+        return res.status(500).json({
+            message: "Server configuration error",
+            error: "JWT_SECRET environment variable is missing"
+        });
+    }
+
     try {
         const { username, password } = req.body || {};
 
         if (!username || !password) {
             return res.status(400).json({ message: "Missing fields" });
+        }
+
+        // Test database connection first
+        if (!db || typeof db.execute !== 'function') {
+            console.error("❌ Database connection not available");
+            return res.status(500).json({
+                message: "Database connection error",
+                error: "Database pool is not properly initialized"
+            });
         }
 
         const [rows] = await db.execute(
@@ -59,10 +77,19 @@ module.exports = async function handler(req, res) {
         });
     } catch (err) {
         console.error("❌ Login error:", err);
+        console.error("Error stack:", err.stack);
+        console.error("Error code:", err.code);
+        console.error("DATABASE_URL exists:", !!process.env.DATABASE_URL);
+
+        // Return more detailed error for debugging
         res.status(500).json({
             message: "Server error",
-            error: process.env.NODE_ENV !== "production" ? err.message : undefined,
+            error: err.message || "Unknown error",
+            code: err.code,
+            // Only show details in development or if explicitly enabled
+            details: (process.env.NODE_ENV !== "production" || process.env.DEBUG === "true")
+                ? err.stack
+                : undefined
         });
     }
-}
-
+};

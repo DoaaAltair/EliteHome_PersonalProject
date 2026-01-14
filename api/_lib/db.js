@@ -8,9 +8,10 @@ if (process.env.DATABASE_URL) {
     poolConfig = {
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 15000,
+        connectionTimeoutMillis: 20000, // Increased for serverless
         idleTimeoutMillis: 30000,
-        max: 20
+        max: 1, // Serverless: use 1 connection per function instance
+        allowExitOnIdle: true // Allow pool to close when idle (important for serverless)
     };
 } else {
     const requiredEnvVars = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
@@ -28,13 +29,29 @@ if (process.env.DATABASE_URL) {
         database: process.env.DB_NAME,
         port: process.env.DB_PORT || 5432,
         ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-        connectionTimeoutMillis: 10000,
+        connectionTimeoutMillis: 20000,
         idleTimeoutMillis: 30000,
-        max: 20
+        max: 1, // Serverless: use 1 connection per function instance
+        allowExitOnIdle: true
     };
 }
 
 const pool = new Pool(poolConfig);
+
+// Handle pool errors gracefully
+pool.on('error', (err) => {
+    console.error('❌ Unexpected database pool error:', err);
+});
+
+// Test connection on initialization (non-blocking)
+pool.query('SELECT 1')
+    .then(() => {
+        console.log('✅ Database pool initialized successfully');
+    })
+    .catch((err) => {
+        console.error('❌ Database pool initialization failed:', err.message);
+        console.error('   DATABASE_URL exists:', !!process.env.DATABASE_URL);
+    });
 
 // MySQL-compatible execute method
 pool.execute = async function (query, params = []) {
