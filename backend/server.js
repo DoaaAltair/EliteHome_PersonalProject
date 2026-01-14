@@ -151,6 +151,21 @@ app.patch("/api/apartments/:id/household-done", verifyToken, async (req, res) =>
     }
 });
 
+app.get("/", (req, res) => {
+    res.send("Elite Home backend is running 🚀");
+});
+
+app.get("/api", (req, res) => {
+    res.json({ status: "API root works" });
+});
+
+app.get("/api/health", (req, res) => {
+    res.json({
+        status: "ok",
+        database: "connected"
+    });
+});
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
@@ -160,11 +175,3 @@ db.query("SELECT 1")
     .catch(err => console.error("❌ Database connection error:", err));
 
 module.exports = app;
-
-app.get("/health", (req, res) => {
-    res.json({ status: "ok" });
-});
-
-app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-});
