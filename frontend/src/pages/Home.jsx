@@ -19,7 +19,7 @@ export default function Home() {
 
             <section className="home-main-content">
                 <div className="content-container">
-                    <h2 className="section-title">What would you like to do?</h2>
+                    {/* <h2 className="section-title">What would you like to do?</h2> */}
 
                     <div className="action-cards">
                         <div className="action-card">
