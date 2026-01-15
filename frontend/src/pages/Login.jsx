@@ -67,7 +67,7 @@ export default function Login() {
                 <div className="login-card-container">
                     <div className="login-logo-container">
                         <img
-                            src="/Elite_Home_logo_login.png"
+                            src="/Elite_Home.png"
                             alt="Elite Home Logo"
                             className="login-logo-img"
                         />
