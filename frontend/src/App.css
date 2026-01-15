@@ -787,8 +787,9 @@ html,
     }
 
     .apartment-page .apartments-header {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
     }
 }
 
@@ -2982,7 +2983,7 @@ span {
     align-items: center;
     padding: 20px;
     border-bottom: 1px solid #e0e0e0;
-    background: #1f3d0c;
+    background: #093940;
     color: #fff;
 }
 
